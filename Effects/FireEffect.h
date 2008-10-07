@@ -134,6 +134,7 @@ private:
         ParticleCollection<TYPE>* particles;
     };
     
+    bool active;
     ParticleRenderer* pr;
     
     ParticleCollection<TYPE>* particles;
@@ -156,6 +157,7 @@ private:
 
 public:
     FireEffect(OpenEngine::ParticleSystem::ParticleSystem* system): 
+        active(false),
         system(system),
         wind(Vector<3,float>(1.591,0,0)),
         antigravity(Vector<3,float>(0,0.382,0)),
@@ -193,7 +195,7 @@ void Handle(ParticleEventArg e) {
         // predefined particle modifiers
 
         // wind.Process(e.dt, particle);
-        // antigravity.Process(e.dt, particle);
+        //antigravity.Process(e.dt, particle);
         sizemod.Process(particle);
         verlet.Process(e.dt, particle);
         colormod.Process(particle);
@@ -208,12 +210,13 @@ inline float RandomAttribute(float base, float variance) {
 }
 
 void inline Emit() {
-    if (particles->GetActiveParticles() >= particles->GetSize())
-        return;
+    if (!active) return;
+//     if (particles->GetActiveParticles() >= particles->GetSize())
+//         return;
     
     // initializer variables
-    static const float number = 7;
-    static const float numberVar = 2;
+    static const float number = 1;
+    static const float numberVar = 0;
     
     // attributes for emission on square
     Vector<3,float> position;
@@ -238,6 +241,8 @@ void inline Emit() {
     static const float spin = 0.05;
     static const float spinVar = 0.1;
     
+    static const float speed = 2.0;
+
 
     int emits = min(unsigned(round(RandomAttribute(number, numberVar))),
                     particles->GetSize()-particles->GetActiveParticles());
@@ -273,12 +278,16 @@ void inline Emit() {
         // this will represent direction and speed when using verlet 
         // integration for updating position
         particle.previousPosition = particle.position - 
-            (direction.RotateVector(Vector<3,float>(0.0,-1.0,0.0)));
+            (direction.RotateVector(Vector<3,float>(0.0,-1.0,0.0))*speed);
     }
 }
 
 ISceneNode* GetSceneNode() {
     return pr;
+}
+
+void SetActive(bool active) {
+    this->active = active;
 }
 
 };
