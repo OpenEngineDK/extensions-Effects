@@ -28,7 +28,7 @@
 
 #include <Renderers/IRenderer.h>
 #include <Renderers/IRenderingView.h>
-#include <Renderers/IRenderNode.h>
+#include <Scene/RenderNode.h>
 #include <Scene/ISceneNode.h>
 
 #include <Renderers/OpenGL/TextureLoader.h>
@@ -38,6 +38,8 @@
 #include <Meta/OpenGL.h>
 
 #include <Math/RandomGenerator.h>
+
+#include <Scene/TransformationNode.h>
 
 namespace OpenEngine {
     namespace Effects {
@@ -49,11 +51,19 @@ using namespace Resources;
 using namespace Renderers::OpenGL;
 using namespace Math;
 
-typedef Color < Texture <Size < PreviousPosition < Position < Life < IParticle > > > > > >  TYPE;
+using OpenEngine::Renderers::OpenGL::TextureLoader;
+
 
 class FireEffect : public IParticleEffect, public TransformationNode {
+public:
+    typedef Color < Texture <Size < PreviousPosition < Position < Life < IParticle > > > > > >  TYPE;
+
+
+protected:
+
+    ParticleCollection<TYPE>* particles;
 private:
-    class ParticleRenderer: public IRenderNode {
+    class ParticleRenderer: public RenderNode {
     public:
         ParticleRenderer(ParticleCollection<TYPE>* particles):
             particles(particles) {}
@@ -73,10 +83,13 @@ private:
             glEnable(GL_TEXTURE_2D);
             glEnable(GL_COLOR_MATERIAL);
     
-            for (particles->iterator.Reset(); particles->iterator.HasNext(); particles->iterator.Next()) {
+            for (particles->iterator.Reset(); 
+                 particles->iterator.HasNext(); 
+                 particles->iterator.Next()) {
+                
                 TYPE& particle = particles->iterator.Element();
                 ITextureResourcePtr texr = particle.texture;
-            
+                
                 //Set texture
                 if (texr != NULL) {
                     if (texr->GetID() == 0) {
@@ -85,14 +98,14 @@ private:
                     }
                     glBindTexture(GL_TEXTURE_2D, texr->GetID());
                 }
-            
+                
                 else {
                     glBindTexture(GL_TEXTURE_2D, 0);
                 }
-            
+                
                 glPushMatrix();
                 glTranslatef(particle.position[0], particle.position[1], particle.position[2]);
-            
+                
                 // billboard
                 float modelview[16];
                 glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
@@ -100,7 +113,7 @@ private:
                 modelview[1] = modelview[2] = modelview[4] = 
                     modelview[6] = modelview[8] = modelview[9] = 0.0; 
                 glLoadMatrixf(modelview);
-
+                
                 // apply quad transformations
                 glRotatef(particle.rotation, 0,0,1);
                 float scale = particle.size;
@@ -108,7 +121,7 @@ private:
                 float c[4];
                 particle.color.ToArray(c);
                 glColor4fv(c);
-            
+                
                 glBegin(GL_QUADS);
                 glTexCoord2f(0.0, 0.0);
                 glVertex3f(-1.0, -1.0, 0.0);
@@ -119,13 +132,14 @@ private:
                 glTexCoord2f(1.0, 0.0);
                 glVertex3f(1, -1, 0);
                 glEnd();
-            
+                
                 glPopMatrix();
             }
-        
+
             glDisable(GL_BLEND);
             glPopAttrib();
-        
+            CHECK_FOR_GL_ERROR();
+            
             // render subnodes
             VisitSubNodes(*view);      
         }
@@ -133,53 +147,123 @@ private:
     private:
         ParticleCollection<TYPE>* particles;
     };
-    
-    bool active;
-    ParticleRenderer* pr;
-    
-    ParticleCollection<TYPE>* particles;
 
-    OpenEngine::ParticleSystem::ParticleSystem* system;
+
+    // emit attributes
+    const float number;
+    const float numberVar;
+
+    const float life;
+    const float lifeVar;
+    
+    const float size;
+    const float sizeVar;
+    
+    // angle is the angular deviation from the direction of
+    // the velocity
+    const float angle;
+    
+    const float spin;
+    const float spinVar;
+    
+    const float speed;
+    const float speedVar;
+
+    //color
+    const Vector<4,float> startColor;
+    const Vector<4,float> endColor;
+
+    
+protected:
+    OpenEngine::ParticleSystem::ParticleSystem& system;
+private:
+    bool active;
+    
+    ParticleRenderer* pr;
+
 
     //initializers
     RandomTextureInitializer<TYPE> inittex;
 
     //modifiers
     VerletModifier<TYPE> verlet;
-    StaticForceModifier<TYPE> wind, antigravity;
+    StaticForceModifier<TYPE> antigravity;
     SizeModifier<TYPE> sizemod;
     LinearColorModifier<TYPE> colormod;
     LifespanModifier<TYPE> lifemod;
     TextureRotationModifier<TYPE> rotationmod;
 
     RandomGenerator randomgen;
-    
 
 public:
-    FireEffect(OpenEngine::ParticleSystem::ParticleSystem* system): 
-        active(false),
+    FireEffect(OpenEngine::ParticleSystem::ParticleSystem& system,
+               unsigned int numParticles,
+               float number, float numberVar,
+               float life, float lifeVar,
+               float size, float sizeVar, float maxSize,
+               float angle, 
+               float spin, float spinVar,
+               float speed, float speedVar,
+               Vector<4,float> startColor, Vector<4,float> endColor,
+               Vector<3,float> antigravity): 
+        particles(system.CreateParticles<TYPE>(numParticles)),
+        number(number), numberVar(numberVar),
+        life(life), lifeVar(lifeVar),
+        size(size), sizeVar(sizeVar),
+        angle(angle),
+        spin(spin), spinVar(spinVar),
+        speed(speed), speedVar(speedVar),
+        startColor(startColor), endColor(endColor),
         system(system),
-        wind(Vector<3,float>(1.591,0,0)),
-        antigravity(Vector<3,float>(0,0.382,0)),
-        sizemod(2.0){
-        particles = system->CreateParticles<TYPE>(500);     
-        
-        //load texture resource
-        ITextureResourcePtr texr1 = ResourceManager<ITextureResource>::Create("Smoke/smoke01.tga");
-        ITextureResourcePtr texr2 = ResourceManager<ITextureResource>::Create("Smoke/smoke02.tga");
-        ITextureResourcePtr texr3 = ResourceManager<ITextureResource>::Create("Smoke/smoke03.tga");
+        active(false),
+        pr(new ParticleRenderer(particles)),
+        antigravity(antigravity),
+        sizemod(maxSize)
 
-        //inittex.AddTextureResource(texr1);
-        //inittex.AddTextureResource(texr2);
-        inittex.AddTextureResource(texr3);
+    {
+        randomgen.SeedWithTime();
+
+    }
+    
+    FireEffect(OpenEngine::ParticleSystem::ParticleSystem& system): 
+        particles(system.CreateParticles<TYPE>(300)),
+        number(7.0),
+        numberVar(2.0),
+        life(2100.0),
+        lifeVar(1000.0),
+        size(2.0),
+        sizeVar(0.5),
+        angle(0.1),
+        spin(0.09),
+        spinVar(0.1),
+        speed(2.0),
+        speedVar(0.25),
+        startColor(Vector<4,float>(.9,.9,0.0,0.9)),
+        endColor(Vector<4,float>(0.8,0.0,0.0,0.3)),
+        system(system),
+        active(false),
+        pr(new ParticleRenderer(particles)),
+        antigravity(Vector<3,float>(0,0.182,0)),
+        sizemod(5.0)
+    {        
+        // receive processing time
+        //system.ProcessEvent().Attach(*this);
+
+        //load texture resource
+//         ITextureResourcePtr texr1 = ResourceManager<ITextureResource>::Create("Smoke/smoke01.tga");
+//         ITextureResourcePtr texr2 = ResourceManager<ITextureResource>::Create("Smoke/smoke02.tga");
+//         ITextureResourcePtr texr3 = ResourceManager<ITextureResource>::Create("Smoke/smoke03.tga");
+
+//         inittex.AddTextureResource(texr1);
+//         inittex.AddTextureResource(texr2);
+//         inittex.AddTextureResource(texr3);
         
         randomgen.SeedWithTime();
         
-        pr = new ParticleRenderer(particles);
 }
 
 ~FireEffect() {
-    delete[] particles;
+    delete particles;
 }
  
 void Handle(ParticleEventArg e) {
@@ -194,8 +278,8 @@ void Handle(ParticleEventArg e) {
 
         // predefined particle modifiers
 
-        // wind.Process(e.dt, particle);
-        //antigravity.Process(e.dt, particle);
+        //wind.Process(e.dt, particle);
+        antigravity.Process(e.dt, particle);
         sizemod.Process(particle);
         verlet.Process(e.dt, particle);
         colormod.Process(particle);
@@ -214,35 +298,16 @@ void inline Emit() {
 //     if (particles->GetActiveParticles() >= particles->GetSize())
 //         return;
     
-    // initializer variables
-    static const float number = 1;
-    static const float numberVar = 0;
-    
-    // attributes for emission on square
     Vector<3,float> position;
     Quaternion<float> direction;
-    GetAccumulatedTransformations(&position, &direction);
+    this->GetAccumulatedTransformations(&position, &direction);
 
+    //logger.info << "particle pos: " << position << logger.end;
+    //logger.info << "particle dir: " << direction << logger.end;
     //static const Vector<3,float> position(0.0, -30.0, -50.0);
     //static const Vector<3,float> devAxis1(20.0,0.0,0.0);
     //static const Vector<3,float> devAxis2(0.0,0.0,20.0);        
     
-    static const float life = 2100;
-    static const float lifeVar = 1000;
-    
-    static const float size = 1;
-    static const float sizeVar = 0;
-    
-    // angle is the angular deviation from the direction of
-    // the velocity
-    static const float angle = 0.25*PI;
-    static const float angleVar = 0.1;
-    
-    static const float spin = 0.05;
-    static const float spinVar = 0.1;
-    
-    static const float speed = 2.0;
-
 
     int emits = min(unsigned(round(RandomAttribute(number, numberVar))),
                     particles->GetSize()-particles->GetActiveParticles());
@@ -250,11 +315,11 @@ void inline Emit() {
     for (int i = 0; i < emits; i++) {
         TYPE& particle = particles->NewParticle();
         
-        // static pos
+        // position based on transformation hierarchy
         particle.position = position;
         //+ devAxis1*randomgen.UniformFloat(-1.0,1.0) 
-        //    + devAxis2*randomgen.UniformFloat(-1.0,1.0);
-            
+        //+ devAxis2*randomgen.UniformFloat(-1.0,1.0);
+        
         particle.life = 0;
         particle.maxlife = RandomAttribute(life, lifeVar);
         particle.size = particle.startsize = RandomAttribute(size, sizeVar);
@@ -262,23 +327,25 @@ void inline Emit() {
         particle.spin = RandomAttribute(spin, spinVar);
 
         //color
-        particle.color = particle.startColor = Vector<4,float>(0.85,0.1,0.0,0.8);
-        particle.endColor = Vector<4,float>(0.1,0.1,0.1,0.1);
+        particle.color = particle.startColor = startColor;
+        particle.endColor = endColor;
 
         // texture
         inittex.Process(particle);
     
         // random direction
-//         float r = (rand()/((float)RAND_MAX))*RandomAttribute(angle, angleVar);
-//         float p = (rand()/((float)RAND_MAX))*2*PI;
-//         Quaternion<float> q(r,p, 0);
-//         q.Normalize();
+        float r = randomgen.UniformFloat(-1.0,1.0)*angle;
+        float p = randomgen.UniformFloat(-1.0,1.0)*angle;
+        float y = randomgen.UniformFloat(-1.0,1.0)*angle;
+        Quaternion<float> q(r,p, y);
+        q.Normalize();
     
         // set the previous position
         // this will represent direction and speed when using verlet 
         // integration for updating position
         particle.previousPosition = particle.position - 
-            (direction.RotateVector(Vector<3,float>(0.0,-1.0,0.0))*speed);
+            (q.RotateVector(direction.RotateVector(Vector<3,float>(0.0,-1.0,0.0))
+                            *RandomAttribute(speed,speedVar)));
     }
 }
 
@@ -288,6 +355,10 @@ ISceneNode* GetSceneNode() {
 
 void SetActive(bool active) {
     this->active = active;
+}
+
+void AddTexture(ITextureResourcePtr texr) {
+    inittex.AddTextureResource(texr);
 }
 
 };
