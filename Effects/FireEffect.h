@@ -31,7 +31,7 @@
 #include <Scene/RenderNode.h>
 #include <Scene/ISceneNode.h>
 
-#include <Renderers/OpenGL/TextureLoader.h>
+#include <Renderers/TextureLoader.h>
 #include <Resources/ITextureResource.h>
 #include <Resources/ResourceManager.h>
 
@@ -48,25 +48,21 @@ using namespace Renderers;
 using namespace Scene;
 using namespace ParticleSystem;
 using namespace Resources;
-using namespace Renderers::OpenGL;
+        //using namespace Renderers::OpenGL;
 using namespace Math;
-
-using OpenEngine::Renderers::OpenGL::TextureLoader;
-
 
 class FireEffect : public IParticleEffect, public TransformationNode {
 public:
     typedef Color < Texture <Size < PreviousPosition < Position < Life < IParticle > > > > > >  TYPE;
 
-
 protected:
-
     ParticleCollection<TYPE>* particles;
+
 private:
     class ParticleRenderer: public RenderNode {
     public:
-        ParticleRenderer(ParticleCollection<TYPE>* particles):
-            particles(particles) {}
+        ParticleRenderer(ParticleCollection<TYPE>* particles, Renderers::TextureLoader& textureLoader):
+            particles(particles), textureLoader(textureLoader) {}
         virtual ~ParticleRenderer() {}
 
         void Apply(IRenderingView* view) {
@@ -74,8 +70,8 @@ private:
             // @todo: we need to move all this gl specific code into the renderer
             // @todo: also glpushmatrix is too expensive. let's make our own calculations 
             //        of the rotation and position of the quad.
-            
-            glPushAttrib(GL_LIGHTING);    
+           
+            glPushAttrib(GL_LIGHTING);
             glDisable(GL_LIGHTING);
             glDepthMask(GL_FALSE);
             glEnable(GL_BLEND);
@@ -93,7 +89,7 @@ private:
                 //Set texture
                 if (texr != NULL) {
                     if (texr->GetID() == 0) {
-                        TextureLoader::LoadTextureResource(texr);
+                        textureLoader.Load(texr);
                         //logger.info << texr->GetID() << logger.end;
                     }
                     glBindTexture(GL_TEXTURE_2D, texr->GetID());
@@ -135,9 +131,8 @@ private:
                 
                 glPopMatrix();
             }
-
-            glDisable(GL_BLEND);
             glPopAttrib();
+            glDisable(GL_BLEND);
             CHECK_FOR_GL_ERROR();
             
             // render subnodes
@@ -146,6 +141,7 @@ private:
 
     private:
         ParticleCollection<TYPE>* particles;
+        TextureLoader& textureLoader; 
     };
 
 
@@ -181,7 +177,6 @@ private:
     
     ParticleRenderer* pr;
 
-
     //initializers
     RandomTextureInitializer<TYPE> inittex;
 
@@ -205,7 +200,8 @@ public:
                float spin, float spinVar,
                float speed, float speedVar,
                Vector<4,float> startColor, Vector<4,float> endColor,
-               Vector<3,float> antigravity): 
+               Vector<3,float> antigravity,
+               Renderers::TextureLoader& textureLoader): 
         particles(system.CreateParticles<TYPE>(numParticles)),
         number(number), numberVar(numberVar),
         life(life), lifeVar(lifeVar),
@@ -216,7 +212,7 @@ public:
         startColor(startColor), endColor(endColor),
         system(system),
         active(false),
-        pr(new ParticleRenderer(particles)),
+        pr(new ParticleRenderer(particles, textureLoader)),
         antigravity(antigravity),
         sizemod(maxSize)
 
@@ -225,7 +221,8 @@ public:
 
     }
     
-    FireEffect(OpenEngine::ParticleSystem::ParticleSystem& system): 
+    FireEffect(OpenEngine::ParticleSystem::ParticleSystem& system, 
+               TextureLoader& textureLoader): 
         particles(system.CreateParticles<TYPE>(300)),
         number(7.0),
         numberVar(2.0),
@@ -242,11 +239,11 @@ public:
         endColor(Vector<4,float>(0.8,0.0,0.0,0.3)),
         system(system),
         active(false),
-        pr(new ParticleRenderer(particles)),
+        pr(new ParticleRenderer(particles, textureLoader)),
         antigravity(Vector<3,float>(0,0.182,0)),
         sizemod(5.0)
     {        
-        // receive processing time
+        //receive processing time
         //system.ProcessEvent().Attach(*this);
 
         //load texture resource
