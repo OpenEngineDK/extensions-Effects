@@ -51,7 +51,7 @@ using namespace Resources;
         //using namespace Renderers::OpenGL;
 using namespace Math;
 
-class FireEffect : public IParticleEffect, public TransformationNode {
+class FireEffect : public IParticleEffect {
 public:
     typedef Color < Texture <Size < PreviousPosition < Position < Life < IParticle > > > > > >  TYPE;
 
@@ -144,7 +144,6 @@ private:
         TextureLoader& textureLoader; 
     };
 
-
     // emit attributes
     const float number;
     const float numberVar;
@@ -189,6 +188,7 @@ private:
     TextureRotationModifier<TYPE> rotationmod;
 
     RandomGenerator randomgen;
+    TransformationNode* transPos;
 
 public:
     FireEffect(OpenEngine::ParticleSystem::ParticleSystem& system,
@@ -214,8 +214,9 @@ public:
         active(false),
         pr(new ParticleRenderer(particles, textureLoader)),
         antigravity(antigravity),
-        sizemod(maxSize)
-
+        sizemod(maxSize),
+        transPos(NULL)
+        
     {
         randomgen.SeedWithTime();
 
@@ -241,7 +242,8 @@ public:
         active(false),
         pr(new ParticleRenderer(particles, textureLoader)),
         antigravity(Vector<3,float>(0,0.182,0)),
-        sizemod(5.0)
+        sizemod(5.0),
+        transPos(NULL)
     {        
         //receive processing time
         //system.ProcessEvent().Attach(*this);
@@ -297,7 +299,8 @@ void inline Emit() {
     
     Vector<3,float> position;
     Quaternion<float> direction;
-    this->GetAccumulatedTransformations(&position, &direction);
+    if (transPos)
+        transPos->GetAccumulatedTransformations(&position, &direction);
 
     //logger.info << "particle pos: " << position << logger.end;
     //logger.info << "particle dir: " << direction << logger.end;
@@ -356,6 +359,14 @@ void SetActive(bool active) {
 
 void AddTexture(ITextureResourcePtr texr) {
     inittex.AddTextureResource(texr);
+}
+
+TransformationNode* GetTransformationNode() {
+    return transPos;
+}
+
+void SetTransformationNode(TransformationNode* node) {
+    transPos = node;
 }
 
 };
