@@ -147,34 +147,35 @@ private:
 
     unsigned int totalEmits;
 
-    // emit attributes
-    const float number;
-    const float numberVar;
-
-    const float life;
-    const float lifeVar;
-    
-    const float size;
-    const float sizeVar;
-    
-    // angle is the angular deviation from the direction of
-    // the velocity
-    const float angle;
-    
-    const float spin;
-    const float spinVar;
-    
-    const float speed;
-    const float speedVar;
-
-    //color
-    const Vector<4,float> startColor;
-    const Vector<4,float> endColor;
 
     
 protected:
+    // emit attributes
+    float number;
+    float numberVar;
+
+    float life;
+    float lifeVar;
+    
+    float size;
+    float sizeVar;
+    
+    // angle is the angular deviation from the direction of
+    // the velocity
+    float angle;
+    
+    float spin;
+    float spinVar;
+    
+    float speed;
+    float speedVar;
+
+    //color
+    Vector<4,float> startColor;
+    Vector<4,float> endColor;
+
     OpenEngine::ParticleSystem::ParticleSystem& system;
-private:
+
     bool active;
     
     ParticleRenderer* pr;
