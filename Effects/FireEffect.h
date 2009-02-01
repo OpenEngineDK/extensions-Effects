@@ -22,6 +22,7 @@
 #include <ParticleSystem/LifespanModifier.h>
 #include <ParticleSystem/VerletModifier.h>
 #include <ParticleSystem/TextureRotationModifier.h>
+#include <ParticleSystem/ColorModifier.h>
 
 // predefined initializers
 #include <ParticleSystem/RandomTextureInitializer.h>
@@ -144,6 +145,8 @@ private:
         TextureLoader& textureLoader; 
     };
 
+    unsigned int totalEmits;
+
     // emit attributes
     const float number;
     const float numberVar;
@@ -183,9 +186,10 @@ private:
     VerletModifier<TYPE> verlet;
     StaticForceModifier<TYPE> antigravity;
     SizeModifier<TYPE> sizemod;
-    LinearColorModifier<TYPE> colormod;
+    LinearColorModifier<TYPE> lcm;
     LifespanModifier<TYPE> lifemod;
     TextureRotationModifier<TYPE> rotationmod;
+    ColorModifier<TYPE> cmod;
 
     RandomGenerator randomgen;
     TransformationNode* transPos;
@@ -203,6 +207,7 @@ public:
                Vector<3,float> antigravity,
                Renderers::TextureLoader& textureLoader): 
         particles(system.CreateParticles<TYPE>(numParticles)),
+        totalEmits(0),
         number(number), numberVar(numberVar),
         life(life), lifeVar(lifeVar),
         size(size), sizeVar(sizeVar),
@@ -215,16 +220,19 @@ public:
         pr(new ParticleRenderer(particles, textureLoader)),
         antigravity(antigravity),
         sizemod(maxSize),
-        transPos(NULL)
-        
+        transPos(NULL) 
     {
         randomgen.SeedWithTime();
-
+        cmod.AddColor(1.0, Vector<4,float>(0.1,0.01,0.01,.3));
+        cmod.AddColor(.7, Vector<4,float>(.7,0.3,0.1,.6));
+        cmod.AddColor(.5, Vector<4,float>(.9,0.75,0.2,.7));
+        cmod.AddColor(.15, Vector<4,float>(0.2,0.2,0.25,.2));
     }
     
     FireEffect(OpenEngine::ParticleSystem::ParticleSystem& system, 
                TextureLoader& textureLoader): 
         particles(system.CreateParticles<TYPE>(300)),
+        totalEmits(0),
         number(7.0),
         numberVar(2.0),
         life(2100.0),
@@ -264,9 +272,11 @@ public:
 ~FireEffect() {
     delete particles;
 }
- 
+
 void Handle(ParticleEventArg e) {
-    Emit();
+    if (active) {
+        totalEmits += Emit();
+    }
 
     for (particles->iterator.Reset(); 
          particles->iterator.HasNext(); 
@@ -274,16 +284,19 @@ void Handle(ParticleEventArg e) {
         TYPE& particle = particles->iterator.Element();
         
         // custom modify particles
-
+        
         // predefined particle modifiers
-
+        
         //wind.Process(e.dt, particle);
         antigravity.Process(e.dt, particle);
         sizemod.Process(particle);
         verlet.Process(e.dt, particle);
-        colormod.Process(particle);
+        cmod.Process(e.dt, particle);
         rotationmod.Process(particle);
-        lifemod.Process(e.dt, particles->iterator);
+        lifemod.Process(e.dt, particle);
+        
+        if (particle.life >= particle.maxlife)
+            particles->iterator.Delete();
     }
 }
 
@@ -292,8 +305,11 @@ inline float RandomAttribute(float base, float variance) {
 
 }
 
-void inline Emit() {
-    if (!active) return;
+unsigned int GetTotalEmits() {
+    return totalEmits;
+}
+
+unsigned int inline Emit() {
 //     if (particles->GetActiveParticles() >= particles->GetSize())
 //         return;
     
@@ -309,10 +325,10 @@ void inline Emit() {
     //static const Vector<3,float> devAxis2(0.0,0.0,20.0);        
     
 
-    int emits = min(unsigned(round(RandomAttribute(number, numberVar))),
+    unsigned int emits = min(unsigned(round(RandomAttribute(number, numberVar))),
                     particles->GetSize()-particles->GetActiveParticles());
     
-    for (int i = 0; i < emits; i++) {
+    for (unsigned int i = 0; i < emits; i++) {
         TYPE& particle = particles->NewParticle();
         
         // position based on transformation hierarchy
@@ -347,6 +363,7 @@ void inline Emit() {
             (q.RotateVector(direction.RotateVector(Vector<3,float>(0.0,-1.0,0.0))
                             *RandomAttribute(speed,speedVar)));
     }
+    return emits;
 }
 
 ISceneNode* GetSceneNode() {
@@ -355,6 +372,14 @@ ISceneNode* GetSceneNode() {
 
 void SetActive(bool active) {
     this->active = active;
+}
+
+bool GetActive() {
+    return active;
+}
+
+void Reset() {
+    totalEmits = 0;
 }
 
 void AddTexture(ITextureResourcePtr texr) {
