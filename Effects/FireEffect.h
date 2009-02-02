@@ -232,18 +232,18 @@ public:
     
     FireEffect(OpenEngine::ParticleSystem::ParticleSystem& system, 
                TextureLoader& textureLoader): 
-        particles(system.CreateParticles<TYPE>(300)),
+        particles(system.CreateParticles<TYPE>(200)),
         totalEmits(0),
         number(7.0),
         numberVar(2.0),
         life(2100.0),
-        lifeVar(1000.0),
+        lifeVar(500.0),
         size(2.0),
         sizeVar(0.5),
         angle(0.1),
         spin(0.09),
         spinVar(0.1),
-        speed(2.0),
+        speed(1.7),
         speedVar(0.25),
         startColor(Vector<4,float>(.9,.9,0.0,0.9)),
         endColor(Vector<4,float>(0.8,0.0,0.0,0.3)),
@@ -254,20 +254,12 @@ public:
         sizemod(5.0),
         transPos(NULL)
     {        
-        //receive processing time
-        //system.ProcessEvent().Attach(*this);
-
-        //load texture resource
-//         ITextureResourcePtr texr1 = ResourceManager<ITextureResource>::Create("Smoke/smoke01.tga");
-//         ITextureResourcePtr texr2 = ResourceManager<ITextureResource>::Create("Smoke/smoke02.tga");
-//         ITextureResourcePtr texr3 = ResourceManager<ITextureResource>::Create("Smoke/smoke03.tga");
-
-//         inittex.AddTextureResource(texr1);
-//         inittex.AddTextureResource(texr2);
-//         inittex.AddTextureResource(texr3);
         
         randomgen.SeedWithTime();
-        
+        cmod.AddColor(1.0, Vector<4,float>(0.1,0.01,0.01,.3));
+        cmod.AddColor(.7, Vector<4,float>(.7,0.3,0.1,.6));
+        cmod.AddColor(.5, Vector<4,float>(.9,0.75,0.2,.7));
+        cmod.AddColor(.15, Vector<4,float>(0.2,0.2,0.25,.2));
 }
 
 ~FireEffect() {
