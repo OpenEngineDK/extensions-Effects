@@ -173,6 +173,8 @@ protected:
     float speed;
     float speedVar;
 
+    float emitdt;
+
     //color
     Vector<4,float> startColor;
     Vector<4,float> endColor;
@@ -219,6 +221,7 @@ public:
         angle(angle),
         spin(spin), spinVar(spinVar),
         speed(speed), speedVar(speedVar),
+        emitdt(0.0),
         startColor(startColor), endColor(endColor),
         system(system),
         active(false),
@@ -251,6 +254,7 @@ public:
         spinVar(0.1),
         speed(1.7),
         speedVar(0.25),
+        emitdt(0.0),
         startColor(Vector<4,float>(.9,.9,0.0,0.9)),
         endColor(Vector<4,float>(0.8,0.0,0.0,0.3)),
         system(system),
@@ -274,7 +278,12 @@ public:
 
 void Handle(ParticleEventArg e) {
     if (active) {
-        totalEmits += Emit();
+        // fixed emit rate
+        emitdt += e.dt;
+        while (emitdt > 0.03) {
+            emitdt -= 0.03;
+            totalEmits += Emit();
+        }
     }
 
     for (particles->iterator.Reset(); 
@@ -311,7 +320,6 @@ unsigned int GetTotalEmits() {
 unsigned int inline Emit() {
 //     if (particles->GetActiveParticles() >= particles->GetSize())
 //         return;
-    
     Vector<3,float> position;
     Quaternion<float> direction;
     if (transPos)
