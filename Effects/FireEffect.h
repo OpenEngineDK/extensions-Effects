@@ -9,18 +9,21 @@
 // particle types
 #include <ParticleSystem/Particles/IParticle.h>
 #include <ParticleSystem/Particles/Position.h>
-#include <ParticleSystem/Particles/PreviousPosition.h>
+//#include <ParticleSystem/Particles/PreviousPosition.h>
 #include <ParticleSystem/Particles/Life.h>
 #include <ParticleSystem/Particles/Color.h>
 #include <ParticleSystem/Particles/Size.h>
 #include <ParticleSystem/Particles/Texture.h>
+#include <ParticleSystem/Particles/Forces.h>
+#include <ParticleSystem/Particles/Velocity.h>
 
 // predefined modifiers
 #include <ParticleSystem/StaticForceModifier.h>
 #include <ParticleSystem/LinearColorModifier.h>
 #include <ParticleSystem/SizeModifier.h>
 #include <ParticleSystem/LifespanModifier.h>
-#include <ParticleSystem/VerletModifier.h>
+#include <ParticleSystem/EulerModifier.h>
+//#include <ParticleSystem/VerletModifier.h>
 #include <ParticleSystem/TextureRotationModifier.h>
 #include <ParticleSystem/ColorModifier.h>
 
@@ -54,7 +57,7 @@ using namespace Math;
 
 class FireEffect : public IParticleEffect {
 public:
-    typedef Color < Texture <Size < PreviousPosition < Position < Life < IParticle > > > > > >  TYPE;
+    typedef Color < Texture <Size < Velocity < Forces < Position < Life < IParticle > > > > > > >  TYPE;
 
 protected:
     ParticleCollection<TYPE>* particles;
@@ -184,7 +187,8 @@ protected:
     RandomTextureInitializer<TYPE> inittex;
 
     //modifiers
-    VerletModifier<TYPE> verlet;
+    //    VerletModifier<TYPE> verlet;
+    EulerModifier<TYPE> euler;
     StaticForceModifier<TYPE> antigravity;
     SizeModifier<TYPE> sizemod;
     LinearColorModifier<TYPE> lcm;
@@ -224,10 +228,12 @@ public:
         transPos(NULL) 
     {
         randomgen.SeedWithTime();
-        cmod.AddColor(1.0, Vector<4,float>(0.1,0.01,0.01,.3));
-        cmod.AddColor(.7, Vector<4,float>(.7,0.3,0.1,.6));
-        cmod.AddColor(.5, Vector<4,float>(.9,0.75,0.2,.7));
-        cmod.AddColor(.15, Vector<4,float>(0.2,0.2,0.25,.2));
+
+        // color sequence
+        cmod.AddColor(1.0, Vector<4,float>(0.1,0.01,0.01,.3)); // blackish
+        cmod.AddColor(.7, Vector<4,float>(.7,0.3,0.1,.6));     // redish
+        cmod.AddColor(.2, Vector<4,float>(.9,0.75,0.2,.7));    // orangeish
+        cmod.AddColor(.0, Vector<4,float>(0.2,0.2,0.3,.1));    // blueish
     }
     
     FireEffect(OpenEngine::ParticleSystem::ParticleSystem& system, 
@@ -256,10 +262,10 @@ public:
     {        
         
         randomgen.SeedWithTime();
-        cmod.AddColor(1.0, Vector<4,float>(0.1,0.01,0.01,.3));
-        cmod.AddColor(.7, Vector<4,float>(.7,0.3,0.1,.6));
-        cmod.AddColor(.5, Vector<4,float>(.9,0.75,0.2,.7));
-        cmod.AddColor(.15, Vector<4,float>(0.2,0.2,0.25,.2));
+        cmod.AddColor(1.0, Vector<4,float>(0.1,0.01,0.01,.3)); // blackish
+        cmod.AddColor(.7, Vector<4,float>(.7,0.3,0.1,.6));     // redish
+        cmod.AddColor(.2, Vector<4,float>(.9,0.75,0.2,.7));   // orangeish
+        cmod.AddColor(.0, Vector<4,float>(0.2,0.2,0.3,.2));   // blueish
 }
 
 ~FireEffect() {
@@ -283,7 +289,7 @@ void Handle(ParticleEventArg e) {
         //wind.Process(e.dt, particle);
         antigravity.Process(e.dt, particle);
         sizemod.Process(particle);
-        verlet.Process(e.dt, particle);
+        euler.Process(e.dt, particle);
         cmod.Process(e.dt, particle);
         rotationmod.Process(particle);
         lifemod.Process(e.dt, particle);
@@ -309,14 +315,7 @@ unsigned int inline Emit() {
     Vector<3,float> position;
     Quaternion<float> direction;
     if (transPos)
-        transPos->GetAccumulatedTransformations(&position, &direction);
-
-    //logger.info << "particle pos: " << position << logger.end;
-    //logger.info << "particle dir: " << direction << logger.end;
-    //static const Vector<3,float> position(0.0, -30.0, -50.0);
-    //static const Vector<3,float> devAxis1(20.0,0.0,0.0);
-    //static const Vector<3,float> devAxis2(0.0,0.0,20.0);        
-    
+        transPos->GetAccumulatedTransformations(&position, &direction);    
 
     unsigned int emits = min(unsigned(round(RandomAttribute(number, numberVar))),
                     particles->GetSize()-particles->GetActiveParticles());
@@ -324,10 +323,8 @@ unsigned int inline Emit() {
     for (unsigned int i = 0; i < emits; i++) {
         TYPE& particle = particles->NewParticle();
         
-        // position based on transformation hierarchy
+        // position based on transformation hierarchy (point emission)
         particle.position = position;
-        //+ devAxis1*randomgen.UniformFloat(-1.0,1.0) 
-        //+ devAxis2*randomgen.UniformFloat(-1.0,1.0);
         
         particle.life = 0;
         particle.maxlife = RandomAttribute(life, lifeVar);
@@ -352,9 +349,15 @@ unsigned int inline Emit() {
         // set the previous position
         // this will represent direction and speed when using verlet 
         // integration for updating position
-        particle.previousPosition = particle.position - 
-            (q.RotateVector(direction.RotateVector(Vector<3,float>(0.0,-1.0,0.0))
-                            *RandomAttribute(speed,speedVar)));
+        //         particle.previousPosition = particle.position - 
+        //             (q.RotateVector(direction.RotateVector(Vector<3,float>(0.0,-1.0,0.0))
+        //                             *RandomAttribute(speed,speedVar)));
+
+
+        // set velocity and forces for use with euler integration
+        particle.velocity = q.RotateVector(direction.RotateVector(Vector<3,float>(0.0,-1.0,0.0))
+                                           *RandomAttribute(speed,speedVar));
+        particle.forces = Vector<3,float>(0.0,0.0,0.0);
     }
     return emits;
 }
