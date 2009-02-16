@@ -18,12 +18,9 @@
 
 // predefined modifiers
 #include <ParticleSystem/StaticForceModifier.h>
-//#include <ParticleSystem/LinearColorModifier.h>
-#include <ParticleSystem/SizeModifier.h>
 #include <ParticleSystem/LifespanModifier.h>
-//#include <ParticleSystem/VerletModifier.h>
-#include <ParticleSystem/ColorModifier.h>
 #include <ParticleSystem/EulerModifier.h>
+#include <ParticleSystem/LinearValueModifier.h>
 
 // predefined initializers
 // ----
@@ -55,9 +52,6 @@ using namespace Math;
 class TextEffect : public IParticleEffect {
 public:
     typedef Color < Texture <Size < Velocity < Forces < Position < Life < IParticle > > > > > > >  TYPE;
-
-protected:
-    ParticleCollection<TYPE>* particles;
 
 private:
     class ParticleRenderer: public RenderNode {
@@ -146,12 +140,11 @@ private:
     };
 
 protected:
+    ParticleCollection<TYPE>* particles;
+    
     // emit attributes
     float life;
     float lifeVar;
-    
-    float size;
-    float sizeVar;
     
     // angle is the angular deviation from the direction of
     // the velocity
@@ -159,51 +152,43 @@ protected:
     
     float speed;
     float speedVar;
-
-    //color
-    Vector<4,float> color;
-
+    
     OpenEngine::ParticleSystem::ParticleSystem& system;
-
+    
     bool active;
     
     ParticleRenderer* pr;
-
+    
     //modifiers
     EulerModifier<TYPE> eulermod;
     LifespanModifier<TYPE> lifemod;
-    ColorModifier<TYPE> cmod;
-    SizeModifier<TYPE> sizemod;
+    LinearValueModifier<TYPE, Vector<4,float> > cmod;
+    LinearValueModifier<TYPE, float> sizemod;
     StaticForceModifier<TYPE> gravity;
-
+    
     RandomGenerator randomgen;
     TransformationNode* transPos;
 
     ITextureResourcePtr tex;
-
+    
 public:
     TextEffect(OpenEngine::ParticleSystem::ParticleSystem& system,
                unsigned int numParticles,
                float life, float lifeVar,
-               float size, float sizeVar, float maxSize,
                float speed, float speedVar,
-               Vector<4,float> color,
                Vector<3,float> gravity,
                Renderers::TextureLoader& textureLoader): 
         particles(system.CreateParticles<TYPE>(numParticles)),
         life(life), lifeVar(lifeVar),
-        size(size), sizeVar(sizeVar),
         speed(speed), speedVar(speedVar),
-        color(color),
         system(system),
         active(false),
         pr(new ParticleRenderer(particles, textureLoader)),
-        sizemod(0.5),
         gravity(gravity),
         transPos(NULL)
     {
         randomgen.SeedWithTime();
-        cmod.AddColor(1.0, Vector<4,float>(0.1,0.01,0.01,.3));
+     
     }
     
     TextEffect(OpenEngine::ParticleSystem::ParticleSystem& system, 
@@ -211,15 +196,11 @@ public:
         particles(system.CreateParticles<TYPE>(49)),
         life(6.1),
         lifeVar(0.5),
-        size(.5),
-        sizeVar(0.5),
         speed(10),
         speedVar(1),
-        color(Vector<4,float>(.0,1.0,.0,1.0)),
         system(system),
         active(false),
         pr(new ParticleRenderer(particles, textureLoader)),
-        sizemod(1.0),
         gravity(Vector<3,float>(0,-1.42,0)),
         transPos(NULL)
     {        
@@ -228,8 +209,11 @@ public:
 
 
         randomgen.SeedWithTime();
-        cmod.AddColor(1.0, Vector<4,float>(.1,.9,.0,.0));
-        cmod.AddColor(0.0, Vector<4,float>(.1,.9,.0,1.0));
+        cmod.AddValue(1.0, Vector<4,float>(.1,.9,.0,.0));
+        cmod.AddValue(0.0, Vector<4,float>(.1,.9,.0,1.0));
+        sizemod.AddValue(1.0, 0);
+        sizemod.AddValue(.9, 3);
+        sizemod.AddValue(0.0, 1);
 }
 
 ~TextEffect() {
@@ -244,9 +228,9 @@ void Handle(ParticleEventArg e) {
         
         // predefined particle modifiers
         gravity.Process(e.dt, particle);
-        sizemod.Process(particle);
         eulermod.Process(e.dt, particle);
-        cmod.Process(e.dt, particle);
+        sizemod.Process(e.dt, particle, particle.size);
+        cmod.Process(e.dt, particle, particle.color);
         lifemod.Process(e.dt, particle);
         
         if (particle.life >= particle.maxlife)
@@ -277,20 +261,10 @@ void inline Emit() {
     
     particle.life = 0;
     particle.maxlife = RandomAttribute(life, lifeVar);
-    particle.size = particle.startsize = RandomAttribute(size, sizeVar);
+    particle.size = 0;
     particle.rotation = 0;
-    
-    //color
-    particle.color = color;
     particle.texture = tex;
     
-    // set the previous position
-    // this will represent direction and speed when using verlet 
-    // integration for updating position
-    //     particle.previousPosition = particle.position - 
-    //         (direction.RotateVector(Vector<3,float>(0.0,-1.0,0.0))
-    //          *RandomAttribute(speed,speedVar));
-
     // set velocity and forces for use with euler integration
     particle.velocity = direction.RotateVector(Vector<3,float>(0.0,-1.0,0.0))
                                        *RandomAttribute(speed,speedVar);

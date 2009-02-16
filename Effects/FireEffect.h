@@ -9,7 +9,6 @@
 // particle types
 #include <ParticleSystem/Particles/IParticle.h>
 #include <ParticleSystem/Particles/Position.h>
-//#include <ParticleSystem/Particles/PreviousPosition.h>
 #include <ParticleSystem/Particles/Life.h>
 #include <ParticleSystem/Particles/Color.h>
 #include <ParticleSystem/Particles/Size.h>
@@ -19,13 +18,11 @@
 
 // predefined modifiers
 #include <ParticleSystem/StaticForceModifier.h>
-#include <ParticleSystem/LinearColorModifier.h>
 #include <ParticleSystem/SizeModifier.h>
 #include <ParticleSystem/LifespanModifier.h>
 #include <ParticleSystem/EulerModifier.h>
-//#include <ParticleSystem/VerletModifier.h>
 #include <ParticleSystem/TextureRotationModifier.h>
-#include <ParticleSystem/ColorModifier.h>
+#include <ParticleSystem/LinearValueModifier.h>
 
 // predefined initializers
 #include <ParticleSystem/RandomTextureInitializer.h>
@@ -52,15 +49,11 @@ using namespace Renderers;
 using namespace Scene;
 using namespace ParticleSystem;
 using namespace Resources;
-        //using namespace Renderers::OpenGL;
 using namespace Math;
 
 class FireEffect : public IParticleEffect {
 public:
     typedef Color < Texture <Size < Velocity < Forces < Position < Life < IParticle > > > > > > >  TYPE;
-
-protected:
-    ParticleCollection<TYPE>* particles;
 
 private:
     class ParticleRenderer: public RenderNode {
@@ -68,7 +61,7 @@ private:
         ParticleRenderer(ParticleCollection<TYPE>* particles, Renderers::TextureLoader& textureLoader):
             particles(particles), textureLoader(textureLoader) {}
         virtual ~ParticleRenderer() {}
-
+        
         void Apply(IRenderingView* view) {
         
             // @todo: we need to move all this gl specific code into the renderer
@@ -147,21 +140,18 @@ private:
         ParticleCollection<TYPE>* particles;
         TextureLoader& textureLoader; 
     };
-
+    
     unsigned int totalEmits;
 
-
-    
 protected:
+    ParticleCollection<TYPE>* particles;
+
     // emit attributes
     float number;
     float numberVar;
 
     float life;
     float lifeVar;
-    
-    float size;
-    float sizeVar;
     
     // angle is the angular deviation from the direction of
     // the velocity
@@ -174,10 +164,7 @@ protected:
     float speedVar;
 
     float emitdt;
-
-    //color
-    Vector<4,float> startColor;
-    Vector<4,float> endColor;
+    float emitRate;
 
     OpenEngine::ParticleSystem::ParticleSystem& system;
 
@@ -189,14 +176,12 @@ protected:
     RandomTextureInitializer<TYPE> inittex;
 
     //modifiers
-    //    VerletModifier<TYPE> verlet;
     EulerModifier<TYPE> euler;
     StaticForceModifier<TYPE> antigravity;
-    SizeModifier<TYPE> sizemod;
-    LinearColorModifier<TYPE> lcm;
+    LinearValueModifier<TYPE,Vector<4,float> > colormod;
+    LinearValueModifier<TYPE,float> sizem;
     LifespanModifier<TYPE> lifemod;
     TextureRotationModifier<TYPE> rotationmod;
-    ColorModifier<TYPE> cmod;
 
     RandomGenerator randomgen;
     TransformationNode* transPos;
@@ -204,73 +189,55 @@ protected:
 public:
     FireEffect(OpenEngine::ParticleSystem::ParticleSystem& system,
                unsigned int numParticles,
+               float emitRate,
                float number, float numberVar,
                float life, float lifeVar,
-               float size, float sizeVar, float maxSize,
                float angle, 
                float spin, float spinVar,
                float speed, float speedVar,
-               Vector<4,float> startColor, Vector<4,float> endColor,
                Vector<3,float> antigravity,
                Renderers::TextureLoader& textureLoader): 
-        particles(system.CreateParticles<TYPE>(numParticles)),
         totalEmits(0),
+        particles(system.CreateParticles<TYPE>(numParticles)),
         number(number), numberVar(numberVar),
         life(life), lifeVar(lifeVar),
-        size(size), sizeVar(sizeVar),
         angle(angle),
         spin(spin), spinVar(spinVar),
         speed(speed), speedVar(speedVar),
         emitdt(0.0),
-        startColor(startColor), endColor(endColor),
+        emitRate(emitRate),
         system(system),
         active(false),
         pr(new ParticleRenderer(particles, textureLoader)),
         antigravity(antigravity),
-        sizemod(maxSize),
         transPos(NULL) 
     {
         randomgen.SeedWithTime();
-
-        // color sequence
-        cmod.AddColor(1.0, Vector<4,float>(0.1,0.01,0.01,.3)); // blackish
-        cmod.AddColor(.7, Vector<4,float>(.7,0.3,0.1,.6));     // redish
-        cmod.AddColor(.2, Vector<4,float>(.9,0.75,0.2,.7));    // orangeish
-        cmod.AddColor(.0, Vector<4,float>(0.2,0.2,0.3,.1));    // blueish
     }
     
     FireEffect(OpenEngine::ParticleSystem::ParticleSystem& system, 
                TextureLoader& textureLoader): 
-        particles(system.CreateParticles<TYPE>(200)),
         totalEmits(0),
+        particles(system.CreateParticles<TYPE>(200)),
         number(7.0),
         numberVar(2.0),
         life(2100.0),
         lifeVar(500.0),
-        size(2.0),
-        sizeVar(0.5),
         angle(0.1),
         spin(0.09),
         spinVar(0.1),
         speed(1.7),
         speedVar(0.25),
         emitdt(0.0),
-        startColor(Vector<4,float>(.9,.9,0.0,0.9)),
-        endColor(Vector<4,float>(0.8,0.0,0.0,0.3)),
+        emitRate(0.04),
         system(system),
         active(false),
         pr(new ParticleRenderer(particles, textureLoader)),
         antigravity(Vector<3,float>(0,0.182,0)),
-        sizemod(5.0),
         transPos(NULL)
     {        
-        
         randomgen.SeedWithTime();
-        cmod.AddColor(1.0, Vector<4,float>(0.1,0.01,0.01,.3)); // blackish
-        cmod.AddColor(.7, Vector<4,float>(.7,0.3,0.1,.6));     // redish
-        cmod.AddColor(.2, Vector<4,float>(.9,0.75,0.2,.7));   // orangeish
-        cmod.AddColor(.0, Vector<4,float>(0.2,0.2,0.3,.2));   // blueish
-}
+    }
 
 ~FireEffect() {
     delete particles;
@@ -280,8 +247,8 @@ void Handle(ParticleEventArg e) {
     if (active) {
         // fixed emit rate
         emitdt += e.dt;
-        while (emitdt > 0.03) {
-            emitdt -= 0.03;
+        while (emitdt > emitRate) {
+            emitdt -= emitRate;
             totalEmits += Emit();
         }
     }
@@ -297,9 +264,10 @@ void Handle(ParticleEventArg e) {
         
         //wind.Process(e.dt, particle);
         antigravity.Process(e.dt, particle);
-        sizemod.Process(particle);
+        //        sizemod.Process(particle);
         euler.Process(e.dt, particle);
-        cmod.Process(e.dt, particle);
+        sizem.Process(e.dt, particle, particle.size);
+        colormod.Process(e.dt, particle, particle.color);
         rotationmod.Process(particle);
         lifemod.Process(e.dt, particle);
         
@@ -336,13 +304,8 @@ unsigned int inline Emit() {
         
         particle.life = 0;
         particle.maxlife = RandomAttribute(life, lifeVar);
-        particle.size = particle.startsize = RandomAttribute(size, sizeVar);
         particle.rotation = 0;
         particle.spin = RandomAttribute(spin, spinVar);
-
-        //color
-        particle.color = particle.startColor = startColor;
-        particle.endColor = endColor;
 
         // texture
         inittex.Process(particle);
@@ -376,6 +339,7 @@ ISceneNode* GetSceneNode() {
 
 void SetActive(bool active) {
     this->active = active;
+    if (!active) emitdt = 0;
 }
 
 bool GetActive() {
@@ -384,6 +348,7 @@ bool GetActive() {
 
 void Reset() {
     totalEmits = 0;
+    emitdt = 0.0;
 }
 
 void AddTexture(ITextureResourcePtr texr) {
