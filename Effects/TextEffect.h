@@ -211,9 +211,9 @@ public:
         randomgen.SeedWithTime();
         cmod.AddValue(1.0, Vector<4,float>(.1,.9,.0,.0));
         cmod.AddValue(0.0, Vector<4,float>(.1,.9,.0,1.0));
-        sizemod.AddValue(1.0, 0);
-        sizemod.AddValue(.9, 3);
-        sizemod.AddValue(0.0, 1);
+        sizemod.AddValue(1.0, 0.01);
+        sizemod.AddValue(.9, 1.2);
+        sizemod.AddValue(0.0, 0.5);
 }
 
 ~TextEffect() {
