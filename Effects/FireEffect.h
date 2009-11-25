@@ -207,7 +207,7 @@ public:
         emitdt(0.0),
         emitRate(emitRate),
         system(system),
-        active(false),
+        active(true),
         pr(new ParticleRenderer(particles, textureLoader)),
         antigravity(antigravity),
         transPos(NULL) 
@@ -231,7 +231,7 @@ public:
         emitdt(0.0),
         emitRate(0.04),
         system(system),
-        active(false),
+        active(true),
         pr(new ParticleRenderer(particles, textureLoader)),
         antigravity(Vector<3,float>(0,0.182,0)),
         transPos(NULL)
