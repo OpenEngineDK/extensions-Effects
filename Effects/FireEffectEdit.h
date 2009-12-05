@@ -98,7 +98,6 @@ WIDGET_START(FireEffectEdit);
   WIDGET_CSLIDER(spin,  GetSpin,  SetSpin, float, _STEP);
   WIDGET_CSLIDER(life,  GetLife,  SetLife, float, _STEP);
   WIDGET_CSLIDER(angle, GetAngle, SetAngle, float, _STEP);
-  WIDGET_SLIDER(angle, GetAngle, SetAngle, CONST, 0, OBJFUNC, GetAngle);
 WIDGET_STOP();
 
 }
