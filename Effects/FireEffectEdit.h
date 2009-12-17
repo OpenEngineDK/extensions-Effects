@@ -37,12 +37,6 @@ public:
                , antigravity
                , textureloader) 
     {
-        // WIDGET_PROPERTY(Play, GetActive, SetActive, FireEffectEdit, BUTTON_STATE);
-        // WIDGET_PROPERTY(number, GetNumber, SetNumber, FireEffectEdit, INT_VALUE);
-        // WIDGET_PROPERTY(speed, GetSpeed, SetSpeed, FireEffectEdit, FLOAT_VALUE);
-        // WIDGET_PROPERTY(spin,  GetSpin,  SetSpin,  FireEffectEdit, FLOAT_VALUE);
-        // WIDGET_PROPERTY(life,  GetLife,  SetLife,  FireEffectEdit, FLOAT_VALUE);
-        // WIDGET_PROPERTY(angle, GetAngle, SetAngle, FireEffectEdit, FLOAT_VALUE);
     }
     
     virtual ~FireEffectEdit() {
@@ -92,12 +86,12 @@ public:
 
 #define _STEP 1.5
 WIDGET_START(FireEffectEdit);
-  WIDGET_BUTTON(Play, GetActive, SetActive);
-  WIDGET_CSLIDER(number, GetNumber, SetNumber, int, 1);
-  WIDGET_CSLIDER(speed, GetSpeed, SetSpeed, float, _STEP);
-  WIDGET_CSLIDER(spin,  GetSpin,  SetSpin, float, _STEP);
-  WIDGET_CSLIDER(life,  GetLife,  SetLife, float, _STEP);
-  WIDGET_CSLIDER(angle, GetAngle, SetAngle, float, _STEP);
+        WIDGET_BUTTON("Play", GetActive, SetActive, TOGGLE);
+        WIDGET_CSLIDER("Number", GetNumber, SetNumber, int, 1);
+        WIDGET_CSLIDER("Speed", GetSpeed, SetSpeed, float, _STEP);
+        WIDGET_CSLIDER("Spin",  GetSpin,  SetSpin, float, _STEP);
+        WIDGET_CSLIDER("Life",  GetLife,  SetLife, float, _STEP);
+        WIDGET_CSLIDER("Angle", GetAngle, SetAngle, float, _STEP);
 WIDGET_STOP();
 
 }
