@@ -85,7 +85,7 @@ public:
 };
 
 #define _STEP 1.5
-WIDGET_START(FireEffectEdit);
+WIDGET_START(FireEffectEdit, FireEffectEditWidget);
         WIDGET_BUTTON("Play", GetActive, SetActive, TOGGLE);
         WIDGET_CSLIDER("Number", GetNumber, SetNumber, int, 1);
         WIDGET_CSLIDER("Speed", GetSpeed, SetSpeed, float, _STEP);
