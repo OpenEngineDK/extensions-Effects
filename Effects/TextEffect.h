@@ -31,7 +31,7 @@
 #include <Scene/ISceneNode.h>
 
 #include <Renderers/TextureLoader.h>
-#include <Resources/ITextureResource.h>
+#include <Resources/ITexture2D.h>
 #include <Resources/ResourceManager.h>
 
 #include <Meta/OpenGL.h>
@@ -79,7 +79,7 @@ private:
                  particles->iterator.Next()) {
                 
                 TYPE& particle = particles->iterator.Element();
-                ITextureResourcePtr texr = particle.texture;
+                ITexture2DPtr texr = particle.texture;
                 
                 //Set texture
                 if (texr != NULL) {
@@ -169,7 +169,7 @@ protected:
     RandomGenerator randomgen;
     TransformationNode* transPos;
 
-    ITextureResourcePtr tex;
+    ITexture2DPtr tex;
     
 public:
     TextEffect(OpenEngine::ParticleSystem::ParticleSystem& system,
@@ -205,7 +205,7 @@ public:
         transPos(NULL)
     {        
         tex = 
-        ResourceManager<ITextureResource>::Create("1.tga");
+        ResourceManager<ITexture2D>::Create("1.tga");
 
 
         randomgen.SeedWithTime();

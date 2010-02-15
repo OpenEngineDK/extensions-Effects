@@ -33,7 +33,7 @@
 #include <Scene/ISceneNode.h>
 
 #include <Renderers/TextureLoader.h>
-#include <Resources/ITextureResource.h>
+#include <Resources/ITexture2D.h>
 #include <Resources/ResourceManager.h>
 
 #include <Meta/OpenGL.h>
@@ -81,7 +81,7 @@ private:
                  particles->iterator.Next()) {
                 
                 TYPE& particle = particles->iterator.Element();
-                ITextureResourcePtr texr = particle.texture;
+                ITexture2DPtr texr = particle.texture;
                 
                 //Set texture
                 if (texr != NULL) {
@@ -351,7 +351,7 @@ void Reset() {
     emitdt = 0.0;
 }
 
-void AddTexture(ITextureResourcePtr texr) {
+void AddTexture(ITexture2DPtr texr) {
     inittex.AddTextureResource(texr);
 }
 
