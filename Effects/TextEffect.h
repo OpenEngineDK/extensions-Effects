@@ -60,7 +60,7 @@ private:
             particles(particles), textureLoader(textureLoader) {}
         virtual ~ParticleRenderer() {}
 
-        void Apply(IRenderingView* view) {
+        void Apply(RenderingEventArg arg, ISceneNodeVisitor& v) {
         
             // @todo: we need to move all this gl specific code into the renderer
             // @todo: also glpushmatrix is too expensive. let's make our own calculations 
@@ -131,7 +131,7 @@ private:
             CHECK_FOR_GL_ERROR();
             
             // render subnodes
-            VisitSubNodes(*view);      
+            VisitSubNodes(v);      
         }
 
     private:
